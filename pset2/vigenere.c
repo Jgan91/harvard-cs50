@@ -9,29 +9,57 @@ int main(int argc, string argv[])
     {
         printf("missing command-line argument\n");
         return 1;
+    } 
+    
+    string k = argv[1];
+    int klength = strlen(k);
+    
+    for (int a = 0; a < klength; a++) 
+    {
+        if (!isalpha(k[a]))
+        {
+            printf("only enter alphabetical characters\n");
+            return 1;
+        }
     }
     
-    int k = atoi(argv[1]);
     printf("plaintext: ");
     string p = get_string();
+    int plength = strlen(p);
     
     printf("ciphertext: ");
-    for (int i = 0; i < strlen(p); i++)
+    int j = 0;
+    for (int i = 0; i < plength; i++)
     {
+        if (j >= klength) {
+            j = 0;
+        }
         if (isalpha(p[i]))
-        {
+       {
             if (isupper(p[i]))
             {
-                printf("%c", ((p[i] - 65 + k) % 26 + 65));
+                if (isupper(k[j]))
+                {
+                    printf("%c", ((p[i] - 65 + (k[j] - 65)) % 26 + 65));
+                } else 
+                {
+                    printf("%c", ((p[i] - 65 + (k[j] - 97)) % 26 + 65));
+                }
             } else if (islower(p[i]))
             {
-                printf("%c", ((p[i] - 97 + k) % 26 + 97));
+                if (isupper(k[j]))
+                {
+                    printf("%c", ((p[i] - 97 + k[j] - 65) % 26 + 97));
+                } else
+                {
+                    printf("%c", ((p[i] - 97 + k[j] - 97) % 26 + 97));
+                }
             } 
+            j += 1;
         } else 
         { 
             printf("%c", p[i]);
         }
     }
-    
     printf("\n");
 }
