@@ -22,7 +22,17 @@ bool search(int value, int values[], int n)
         return false;
     }
     
-    binsearch(value, values, 0, n);
+    for (int i = 0; i < n; i++)
+    {
+        if (values[i] == value)
+        {
+            return true;
+        }
+    }
+    
+    return false;
+    
+    //binsearch(value, values, 0, n);
     /*
     int start = 0;
     int end = n - 1;
@@ -56,9 +66,35 @@ bool search(int value, int values[], int n)
 void sort(int values[], int n)
 {
     // TODO: implement a sorting algorithm
+    // set swap counter to non-zero value
+    int swap = -1;
+    // repeat until swap counter is zero:
+    while (swap != 0)
+    {
+        // reset swap counter to 0
+        swap = 0
+        // look at each adjacent pair
+        for (int i = 0; i < n - 1; i++)
+        {
+            // if two adjacent elements are not in order, swap them and add 1 to swap counter
+            if (values[i] > values[i + 1])
+            {
+                int temp = values[i];
+                values[i] = values[i + 1];
+                values[i + 1] = temp;
+                swap += 1;
+            }
+        }
+    }
+        
+    
+        
+    
     return;
 }
 
+
+/*
 bool binsearch(int value, int values[], int start, int end)
 {
     // Calculate middle
@@ -85,3 +121,4 @@ bool binsearch(int value, int values[], int start, int end)
         binsearch(value, values, start, end);
     }
 }
+*/
