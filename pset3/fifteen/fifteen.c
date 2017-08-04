@@ -167,7 +167,7 @@ void init(void)
                 board[i][j] = (d * d - 1) - j - (i * d);
                 if (board[i][j] == 0)
                 {
-                    board[i][j] = -1;
+                    board[i][j] = 0;
                 }
             }
         }
@@ -189,7 +189,7 @@ void init(void)
                 
                 if (board[i][j] == 0)
                 {
-                    board[i][j] = -1;
+                    board[i][j] = 0;
                 }
             }
         }
@@ -206,7 +206,7 @@ void draw(void)
     {
         for (int j = 0; j < d; j ++)
         {
-            if (board[i][j] == -1) 
+            if (board[i][j] == 0) 
             {
                 printf(" _  ");    
             } else if (board[i][j] < 10)
@@ -227,68 +227,51 @@ void draw(void)
  */
 bool move(int tile)
 {
+    
     int x;
     int y;
-    bool found = false;
-    // search for tile
     for (int i = 0; i < d; i++)
     {
-        for (int j = 0; j < d; j++) 
+        for (int j = 0; j < d; j++)
         {
-            if (board[i][j] == tile)
+            if (board[i][j] == 0)
             {
                 x = j;
                 y = i;
-                found = true;
-            } 
+            }
         }
     }
     
-    if (!found) {
-        return false;
-    }
-
-
-    // check if tile borders empty space
     // check north
-    if (y - 1 > 0)
+    if (board[y - 1][x] == tile)
     {
-        if (board[y - 1][x] == -1)
-        {
-            board[y - 1][x] = tile;
-            board[y][x] = -1;
-            return true;
-        }
+        board[y - 1][x] = 0;
+        board[y][x] = tile;
+        return true;
     }
+    
     // check south
-    if (y + 1 < d - 1)
+    if (board[y + 1][x] == tile)
     {
-        if (board[y + 1][x] == -1)
-        {
-            board[y + 1][x] = tile;
-            board[y][x] = -1;
-            return true;
-        }
+        board[y + 1][x] = 0;
+        board[y][x] = tile;
+        return true;
     }
+    
     // check east
-    if (x + 1 < d - 1)
-    {
-        if (board[y][x + 1] == -1)
+    if (board[y][x + 1] == tile)
         {
-            board[y][x + 1] = tile;
-            board[y][x] = -1;
+            board[y][x + 1] = 0;
+            board[y][x] = tile;
             return true;
         }
-    }
+    
     // check west
-    if (x - 1 > 0)
+    if (board[y][x - 1] == tile)
     {
-        if (board[y][x - 1] == -1)
-        {
-            board[y][x - 1] = tile;
-            board[y][x] = -1;
-            return true;
-        }
+        board[y][x - 1] = 0;
+        board[y][x] = tile;
+        return true;
     }
     
     return false;
@@ -305,29 +288,12 @@ bool won(void)
     {
         for (int j = 0; j < d; j++)
         {
-            if (board[i][j] != (1 + j + (d * i)) && board[i][j] != -1)
+            if (board[i][j] != (1 + j + (d * i)) && board[i][j] != 0)
             {
                 return false;
             }
         }
     }
-    
-    /*
-    bool correct = false;
-    // TODO
-    for (int i = 0; i < d; i++)
-    {
-        for (int j = 0; j < d; j++)
-        {
-            if (board[i][j] == 1 + j + (d * i) || board[i][j] == -1)
-            {
-                correct = true;
-            } else {
-                return false;
-            }
-        }
-    }
-    */
     
     return true;
 }
