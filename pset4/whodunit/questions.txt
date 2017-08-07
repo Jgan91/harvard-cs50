@@ -1,0 +1,12 @@
+1.  stdint.h is a header that defines new integer types to improve the portability of programs
+2.  They define data types that are used in Microsoft products.
+3.  8, 32, 32, 16
+4.  00
+5.  bfSize is the size of the file, biSize is the size of the structure
+6.  a negative biHeight indicates a top-down DIB
+7.  biBitCount
+8.  fopen may return NULL if input or output files don't exist
+9.  fread is always 1 in our code because we only need to read the file once
+10. 3
+11. fseek changes the position of a file pointer
+12. SEEK_CUR is the file pointer's current location
