@@ -6,6 +6,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <strings.h>
 #include <ctype.h>
 
 #include "dictionary.h"
@@ -31,7 +32,7 @@ bool check(const char *word)
     ptr = head;
     while (ptr != NULL)
     {
-        if (strcmp(ptr->word, word) == 0)
+        if (strcasecmp(ptr->word, word) == 0)
         {
             return true;
         }
@@ -46,6 +47,7 @@ bool check(const char *word)
 bool load(const char *dictionary)
     {
     head = malloc(sizeof(node));
+    memset(head, 0, sizeof(node));
 
     FILE* fptr = fopen(dictionary, "r");
     
@@ -72,7 +74,10 @@ bool load(const char *dictionary)
         // point head to new node
         head = new_node;
     }
+    free(word);
     
+    fclose(fptr);
+
     return true;
     
 }
@@ -82,8 +87,19 @@ bool load(const char *dictionary)
  */
 unsigned int size(void)
 {
-    // TODO
-    return 0;
+    ptr = head;
+    if (ptr->next == NULL)
+    {
+        return 0;
+    }
+    unsigned int count = 0;
+    while (ptr != NULL)
+    {
+        count += 1;
+        ptr = ptr->next;
+    }
+    return count - 1;
+    
 }
 
 /**
@@ -91,6 +107,13 @@ unsigned int size(void)
  */
 bool unload(void)
 {
-    // TODO
-    return false;
+    ptr = head;
+    while (ptr != NULL)
+    {
+        node *temp = ptr;
+        ptr = ptr->next;
+        free(temp);
+    }
+    free(ptr);
+    return true;
 }
