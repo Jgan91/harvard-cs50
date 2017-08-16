@@ -1,0 +1,16 @@
+0.  pneumoconiosis caused by inhalation of very fine
+silicate or quartz dust
+1.  getrusage returns resource usage measures
+2.  16
+3.  passing the value of before and after will only pass the value 
+of their locations
+4.  main reads through the text character by character
+        if the character is alphabetical or an apostrophe, main appends character to the array, "word"
+        if the character is a digit, main skips over contiguous digits
+        if the character is none of the above, main assumes a word is found
+            main appends an end of string character to array, "word"
+            main updates the word counter
+            main calls check(); to check the word's spelling
+            if the word is mispelled, the word is printed to the terminal and the mispelling counter is updated
+5.  fgetc is used instead of fscanf because fscanf may return non-alphabetical characters
+6.  check and load's parameters are declared as constant because the pointee values should not be changed
