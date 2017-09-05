@@ -27,9 +27,13 @@ class Analyzer():
         """Analyze text for sentiment, returning its score."""
         tokens = self.tokenizer.tokenize(text)
         score = 0
+        positive_words = []
+        negative_words = []
         for token in tokens:
             if token.lower() in self.positives:
                 score += 1
+                positive_words.append(token)
             elif token.lower() in self.negatives:
                 score -= 1
-        return score
+                negative_words.append(token)
+        return score, positive_words, negative_words

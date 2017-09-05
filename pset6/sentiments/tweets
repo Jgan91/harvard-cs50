@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 
-# TODO
 import os
 import sys
+import nltk
 
 from analyzer import Analyzer
 from termcolor import colored
@@ -30,14 +30,24 @@ def main():
     analyzer = Analyzer(positives, negatives)
 
     # analyze tweets
+    tokenizer = nltk.tokenize.TweetTokenizer()
     for tweet in tweets:
-        score = analyzer.analyze(tweet)
+        score, positive_words, negative_words = analyzer.analyze(tweet)
+        tokens = tokenizer.tokenize(tweet)
         if score > 0.0:
-            print(colored("{} {}".format(score, tweet), "green"))
+            print(colored("{} ".format(score), "green"), end="")
         elif score < 0.0:
-            print(colored("{} {}".format(score, tweet), "red"))
+            print(colored("{} ".format(score), "red"), end="")
         else:
-            print(colored("{} {}".format(score, tweet), "yellow"))
+            print(colored("{} ".format(score), "yellow"), end="")
+        for token in tokens:
+            if token in positive_words:
+                print(colored("{} ".format(token), "green"), end="")
+            elif token in negative_words:
+                print(colored("{} ".format(token), "red"), end="")
+            else:
+                print(colored("{} ".format(token), "yellow"), end="")
+        print("")
 
 if __name__ == "__main__":
     main()
