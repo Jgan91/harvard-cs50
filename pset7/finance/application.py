@@ -33,7 +33,24 @@ db = SQL("sqlite:///finance.db")
 @app.route("/")
 @login_required
 def index():
-    return render_template("index")
+    # store symbol, name, shares
+    stocks = db.execute("SELECT symbol, name, sum(shares) FROM transactions JOIN stocks ON transactions.symbol_id = stocks.symbol_id WHERE transactions.user_id = :user_id GROUP BY stocks.symbol_id", user_id=session["user_id"])
+    total = 0
+
+    # iterate over each stock to find current price & holding value
+    for stock in stocks:
+        price = lookup(stock["symbol"])["price"]
+        stock["price"] = usd(price)
+        holding = price * stock["sum(shares)"]
+        stock["total"] = usd(holding)
+        total += holding
+
+    # retrieve user's cash amount
+    cash = db.execute("SELECT cash FROM users WHERE user_id = :user_id",
+        user_id=session["user_id"])[0]["cash"]
+    total += cash
+
+    return render_template("index.html", stocks=stocks, cash=usd(cash), total=usd(total))
 
 @app.route("/buy", methods=["GET", "POST"])
 @login_required
@@ -61,29 +78,29 @@ def buy():
         cost = shares * price
 
         # check if user can afford stocks
-        cash = db.execute("SELECT cash FROM users WHERE id = :id_", id_=session["user_id"])[0]["cash"]
+        cash = db.execute("SELECT cash FROM users WHERE user_id = :id_", id_=session["user_id"])[0]["cash"]
         if cost > cash:
             return apology("can't afford")
 
         # add stock to user's portfolio
         else:
             # check for stock in database
-            symbol_id = db.execute("SELECT id FROM stocks WHERE symbol = :symbol", symbol=symbol)[0]["id"]
+            symbol_id = db.execute("SELECT symbol_id FROM stocks WHERE symbol = :symbol", symbol=symbol)
 
             # add stock to database if it doesn't exist
-            if symbol_id == 0:
-                db.execute("INSERT INTO stocks (symbol) VALUES (:symbol)", symbol=symbol)
-                symbol_id = db.execute("SELECT id FROM stocks WHERE symbol = :symbol", symbol=symbol)[0]["id"]
+            if len(symbol_id) == 0:
+                db.execute("INSERT INTO stocks (symbol, name) VALUES (:symbol, :name)", symbol=symbol, name=name)
+                symbol_id = db.execute("SELECT symbol_id FROM stocks WHERE symbol = :symbol", symbol=symbol)
 
             # compute current time
             time = db.execute("SELECT datetime('now')")[0]["datetime('now')"]
 
             # insert transaction into database
             db.execute("INSERT INTO transactions (user_id, symbol_id, shares, price, time) VALUES (:user_id, :symbol_id, :shares, :price, :time)",
-            user_id=session["user_id"], symbol_id=symbol_id, shares=shares, price=price, time=time)
+            user_id=session["user_id"], symbol_id=symbol_id[0]["symbol_id"], shares=shares, price=price, time=time)
 
         # update cash
-        db.execute("UPDATE users SET cash = cash - :cost WHERE id = :id_", cost=cost, id_=session["user_id"])
+        db.execute("UPDATE users SET cash = cash - :cost WHERE user_id = :id_", cost=cost, id_=session["user_id"])
 
         # redirect user to homepage
         return redirect(url_for("index"))
@@ -123,7 +140,7 @@ def login():
             return apology("invalid username and/or password")
 
         # remember which user has logged in
-        session["user_id"] = rows[0]["id"]
+        session["user_id"] = rows[0]["user_id"]
 
         # redirect user to home page
         return redirect(url_for("index"))
@@ -199,7 +216,7 @@ def register():
             hash_ = pwd_context.hash(request.form.get("password"))
             rows = db.execute("INSERT INTO users (username, hash) VALUES(:username, :hash_)",
                 username=request.form.get("username"), hash_=hash_)
-            session["user_id"] = db.execute("SELECT id FROM users WHERE username = :username", username=request.form.get("username"))
+            session["user_id"] = db.execute("SELECT user_id FROM users WHERE username = :username", username=request.form.get("username"))
             return redirect(url_for("index"))
 
     else:
