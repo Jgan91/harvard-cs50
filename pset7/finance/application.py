@@ -33,13 +33,63 @@ db = SQL("sqlite:///finance.db")
 @app.route("/")
 @login_required
 def index():
-    return apology("TODO")
+    return render_template("index")
 
 @app.route("/buy", methods=["GET", "POST"])
 @login_required
 def buy():
     """Buy shares of stock."""
-    return apology("TODO")
+    if request.method == "POST":
+        # retrieve stock quote
+        stock = lookup(request.form.get("symbol"))
+
+        # ensure stock is valid
+        if stock == None:
+            return apology("invalid stock")
+
+        # store stock info
+        name = stock["name"]
+        price = stock["price"]
+        symbol = stock["symbol"]
+
+        # ensure numeric input
+        shares = int(request.form.get("shares"))
+        if shares == "":
+            return apology("missing shares")
+        elif not request.form.get("shares").isnumeric():
+            return apology("invalid shares")
+        cost = shares * price
+
+        # check if user can afford stocks
+        cash = db.execute("SELECT cash FROM users WHERE id = :id_", id_=session["user_id"])[0]["cash"]
+        if cost > cash:
+            return apology("can't afford")
+
+        # add stock to user's portfolio
+        else:
+            # check for stock in database
+            symbol_id = db.execute("SELECT id FROM stocks WHERE symbol = :symbol", symbol=symbol)[0]["id"]
+
+            # add stock to database if it doesn't exist
+            if symbol_id == 0:
+                db.execute("INSERT INTO stocks (symbol) VALUES (:symbol)", symbol=symbol)
+                symbol_id = db.execute("SELECT id FROM stocks WHERE symbol = :symbol", symbol=symbol)[0]["id"]
+
+            # compute current time
+            time = db.execute("SELECT datetime('now')")[0]["datetime('now')"]
+
+            # insert transaction into database
+            db.execute("INSERT INTO transactions (user_id, symbol_id, shares, price, time) VALUES (:user_id, :symbol_id, :shares, :price, :time)",
+            user_id=session["user_id"], symbol_id=symbol_id, shares=shares, price=price, time=time)
+
+        # update cash
+        db.execute("UPDATE users SET cash = cash - :cost WHERE id = :id_", cost=cost, id_=session["user_id"])
+
+        # redirect user to homepage
+        return redirect(url_for("index"))
+
+    # display form
+    return render_template("buy.html")
 
 @app.route("/history")
 @login_required
@@ -101,10 +151,15 @@ def quote():
 
         # retrieve stock quote
         stock = lookup(request.form.get("symbol"))
+
+        # ensure stock is valid
+        if stock == None:
+            return apology("invalid stock")
+
+        # store stock info
         name = stock["name"]
         price = usd(stock["price"])
         symbol = stock["symbol"]
-
 
         # display stock quote
         return render_template("quoted.html", name=name, price=price, symbol=symbol)
@@ -141,9 +196,9 @@ def register():
 
         # INSERT new user into users, storing a hash of their password
         else:
-            hash = pwd_context.hash(request.form.get("password"))
-            rows = db.execute("INSERT INTO users (username, hash) VALUES(:username, :hash)",
-                username=request.form.get("username"), hash=hash)
+            hash_ = pwd_context.hash(request.form.get("password"))
+            rows = db.execute("INSERT INTO users (username, hash) VALUES(:username, :hash_)",
+                username=request.form.get("username"), hash_=hash_)
             session["user_id"] = db.execute("SELECT id FROM users WHERE username = :username", username=request.form.get("username"))
             return redirect(url_for("index"))
 
