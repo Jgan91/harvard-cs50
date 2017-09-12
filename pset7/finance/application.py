@@ -33,23 +33,10 @@ db = SQL("sqlite:///finance.db")
 @app.route("/")
 @login_required
 def index():
-    # store symbol, name, shares
-    stocks = db.execute("SELECT symbol, name, sum(shares) FROM transactions JOIN stocks ON transactions.symbol_id = stocks.symbol_id WHERE transactions.user_id = :user_id GROUP BY stocks.symbol_id", user_id=session["user_id"])
-    total = 0
+    # retrieve portfolio
+    stocks, cash, total = portfolio()
 
-    # iterate over each stock to find current price & holding value
-    for stock in stocks:
-        price = lookup(stock["symbol"])["price"]
-        stock["price"] = usd(price)
-        holding = price * stock["sum(shares)"]
-        stock["total"] = usd(holding)
-        total += holding
-
-    # retrieve user's cash amount
-    cash = db.execute("SELECT cash FROM users WHERE user_id = :user_id",
-        user_id=session["user_id"])[0]["cash"]
-    total += cash
-
+    # display portfolio
     return render_template("index.html", stocks=stocks, cash=usd(cash), total=usd(total))
 
 @app.route("/buy", methods=["GET", "POST"])
@@ -159,6 +146,27 @@ def logout():
     # redirect user to login form
     return redirect(url_for("login"))
 
+def portfolio():
+    """Retrieve users portfolio"""
+    # store symbol, name, shares, total
+    stocks = db.execute("SELECT symbol, name, sum(shares) FROM transactions JOIN stocks ON transactions.symbol_id = stocks.symbol_id WHERE transactions.user_id = :user_id GROUP BY stocks.symbol_id", user_id=session["user_id"])
+    total = 0
+
+    # iterate over each stock to find current price & holding value
+    for stock in stocks:
+        price = lookup(stock["symbol"])["price"]
+        stock["price"] = usd(price)
+        holding = price * stock["sum(shares)"]
+        stock["total"] = usd(holding)
+        total += holding
+
+    # retrieve user's cash amount
+    cash = db.execute("SELECT cash FROM users WHERE user_id = :user_id",
+        user_id=session["user_id"])[0]["cash"]
+    total += cash
+    return stocks, cash, total
+
+
 @app.route("/quote", methods=["GET", "POST"])
 @login_required
 def quote():
@@ -226,4 +234,13 @@ def register():
 @login_required
 def sell():
     """Sell shares of stock."""
+    # display form
+    return render_template("sell.html")
+
+    # remove stock from user's portfolio
+        # implement as negative quantity transaction
+
+
+    # update cash
     return apology("TODO")
+
