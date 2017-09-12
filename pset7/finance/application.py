@@ -45,7 +45,10 @@ def buy():
     """Buy shares of stock."""
     if request.method == "POST":
         # retrieve stock quote
-        name, price, symbol = get_quote(request.form.get("symbol"))
+        try:
+            name, price, symbol = get_quote(request.form.get("symbol"))
+        except (ValueError, TypeError):
+            return apology("invalid stock")
 
         # ensure numeric input
         shares = int(request.form.get("shares"))
@@ -85,6 +88,7 @@ def buy():
         db.execute("UPDATE users SET cash = cash - :cost WHERE user_id = :id_", cost=cost, id_=session["user_id"])
 
         # redirect user to homepage
+        flash('Bought!')
         return redirect(url_for("index"))
 
 
@@ -95,6 +99,21 @@ def buy():
 
         # display form
         return render_template("buy.html", stocks=stocks, cash=usd(cash), total=usd(total))
+
+def get_quote(symbol):
+    # retrieve stock quote
+    stock = lookup(symbol)
+
+    # ensure stock is valid
+    if stock == None:
+        return
+
+    # store stock info
+    name = stock["name"]
+    price = stock["price"]
+    symbol = stock["symbol"]
+
+    return name, price, symbol
 
 @app.route("/history")
 @login_required
@@ -135,6 +154,7 @@ def login():
         session["user_id"] = rows[0]["user_id"]
 
         # redirect user to home page
+        flash("Welcome, {}".format(rows[0]["username"]))
         return redirect(url_for("index"))
 
     # else if user reached route via GET (as by clicking a link or via redirect)
@@ -176,18 +196,24 @@ def portfolio():
 @login_required
 def quote():
     """Get stock quote."""
+    # retrieve portfolio
+    stocks, cash, total = portfolio()
 
     if request.method == "POST":
 
         # retrieve stock quote
-        name, price, symbol = get_quote(request.form.get("symbol"))
+        try:
+            name, price, symbol = get_quote(request.form.get("symbol"))
+        except (ValueError, TypeError):
+            return apology("invalid stock")
 
         # display stock quote
-        return render_template("quoted.html", name=name, price=price, symbol=symbol)
+        return render_template("quoted.html", name=name, price=price, symbol=symbol, stocks=stocks, cash=usd(cash), total=usd(total))
 
+    # else if user reached route via GET (as by clicking a link or via redirect)
     else:
         # display form
-        return render_template("quote.html")
+        return render_template("quote.html", stocks=stocks, cash=usd(cash), total=usd(total))
 
 @app.route("/register", methods=["GET", "POST"])
 def register():
@@ -221,8 +247,10 @@ def register():
             rows = db.execute("INSERT INTO users (username, hash) VALUES(:username, :hash_)",
                 username=request.form.get("username"), hash_=hash_)
             session["user_id"] = db.execute("SELECT user_id FROM users WHERE username = :username", username=request.form.get("username"))
+            flash("Registered!")
             return redirect(url_for("index"))
 
+    # else if user reached route via GET (as by clicking a link or via redirect)
     else:
         return render_template("register.html")
 
@@ -245,7 +273,10 @@ def sell():
         # implement sale as negative quantity transaction
         else:
             # retrieve stock quote
-            name, price, symbol = get_quote(request.form.get("symbol"))
+            try:
+                name, price, symbol = get_quote(request.form.get("symbol"))
+            except (ValueError, TypeError):
+                return apology("invalid stock")
 
             # retrieve symbol_id
             symbol_id = db.execute("SELECT symbol_id FROM stocks WHERE symbol = :symbol",
@@ -262,6 +293,7 @@ def sell():
             db.execute("UPDATE users SET cash = cash + :cost WHERE user_id = :id_", cost=cost, id_=session["user_id"])
 
             # redirect to index
+            flash("Sold!")
             return redirect(url_for("index"))
 
     # else if user reached route via GET (as by clicking a link or via redirect)
@@ -269,19 +301,5 @@ def sell():
         # display form
         return render_template("sell.html", stocks=stocks, cash=usd(cash), total=usd(total))
 
-def get_quote(symbol):
-    # retrieve stock quote
-        stock = lookup(symbol)
-
-        # ensure stock is valid
-        if stock == None:
-            return apology("invalid stock")
-
-        # store stock info
-        name = stock["name"]
-        price = stock["price"]
-        symbol = stock["symbol"]
-
-        return name, price, symbol
 
 
