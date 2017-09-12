@@ -45,16 +45,7 @@ def buy():
     """Buy shares of stock."""
     if request.method == "POST":
         # retrieve stock quote
-        stock = lookup(request.form.get("symbol"))
-
-        # ensure stock is valid
-        if stock == None:
-            return apology("invalid stock")
-
-        # store stock info
-        name = stock["name"]
-        price = stock["price"]
-        symbol = stock["symbol"]
+        name, price, symbol = get_quote(request.form.get("symbol"))
 
         # ensure numeric input
         shares = int(request.form.get("shares"))
@@ -65,26 +56,30 @@ def buy():
         cost = shares * price
 
         # check if user can afford stocks
-        cash = db.execute("SELECT cash FROM users WHERE user_id = :id_", id_=session["user_id"])[0]["cash"]
+        cash = db.execute("SELECT cash FROM users WHERE user_id = :id_",
+            id_=session["user_id"])[0]["cash"]
         if cost > cash:
             return apology("can't afford")
 
         # add stock to user's portfolio
         else:
             # check for stock in database
-            symbol_id = db.execute("SELECT symbol_id FROM stocks WHERE symbol = :symbol", symbol=symbol)
+            symbol_id = db.execute("SELECT symbol_id FROM stocks WHERE symbol = :symbol",
+                symbol=symbol)
 
             # add stock to database if it doesn't exist
             if len(symbol_id) == 0:
-                db.execute("INSERT INTO stocks (symbol, name) VALUES (:symbol, :name)", symbol=symbol, name=name)
-                symbol_id = db.execute("SELECT symbol_id FROM stocks WHERE symbol = :symbol", symbol=symbol)
+                db.execute("INSERT INTO stocks (symbol, name) VALUES (:symbol, :name)",
+                    symbol=symbol, name=name)
+                symbol_id = db.execute("SELECT symbol_id FROM stocks WHERE symbol = :symbol",
+                    symbol=symbol)
 
             # compute current time
             time = db.execute("SELECT datetime('now')")[0]["datetime('now')"]
 
             # insert transaction into database
             db.execute("INSERT INTO transactions (user_id, symbol_id, shares, price, time) VALUES (:user_id, :symbol_id, :shares, :price, :time)",
-            user_id=session["user_id"], symbol_id=symbol_id[0]["symbol_id"], shares=shares, price=price, time=time)
+                user_id=session["user_id"], symbol_id=symbol_id[0]["symbol_id"], shares=shares, price=price, time=time)
 
         # update cash
         db.execute("UPDATE users SET cash = cash - :cost WHERE user_id = :id_", cost=cost, id_=session["user_id"])
@@ -92,17 +87,24 @@ def buy():
         # redirect user to homepage
         return redirect(url_for("index"))
 
-    # retrieve portfolio
-    stocks, cash, total = portfolio()
 
-    # display form
-    return render_template("buy.html", stocks=stocks, cash=usd(cash), total=usd(total))
+    # else if user reached route via GET (as by clicking a link or via redirect)
+    else:
+        # retrieve portfolio
+        stocks, cash, total = portfolio()
+
+        # display form
+        return render_template("buy.html", stocks=stocks, cash=usd(cash), total=usd(total))
 
 @app.route("/history")
 @login_required
 def history():
     """Show history of transactions."""
-    return apology("TODO")
+    # retrieve transaction history
+    transactions = db.execute("SELECT * FROM users JOIN transactions ON users.user_id = transactions.user_id JOIN stocks ON transactions.symbol_id = stocks.symbol_id WHERE users.user_id = :user_id ORDER BY transactions.time",
+        user_id=session["user_id"])
+
+    return render_template("history.html", transactions=transactions)
 
 @app.route("/login", methods=["GET", "POST"])
 def login():
@@ -178,16 +180,7 @@ def quote():
     if request.method == "POST":
 
         # retrieve stock quote
-        stock = lookup(request.form.get("symbol"))
-
-        # ensure stock is valid
-        if stock == None:
-            return apology("invalid stock")
-
-        # store stock info
-        name = stock["name"]
-        price = usd(stock["price"])
-        symbol = stock["symbol"]
+        name, price, symbol = get_quote(request.form.get("symbol"))
 
         # display stock quote
         return render_template("quoted.html", name=name, price=price, symbol=symbol)
@@ -237,21 +230,58 @@ def register():
 @login_required
 def sell():
     """Sell shares of stock."""
-    if request.method == "POST":
-        # remove stock from user's portfolio
-        # check if user has the shares they want to sell
-        shares = request.form.get("shares")
-        # implement as negative quantity transaction
-
-
-        # update cash
-
     # retrieve portfolio
     stocks, cash, total = portfolio()
 
-    # display form
-    return render_template("sell.html", stocks=stocks, cash=usd(cash), total=usd(total))
+    if request.method == "POST":
+        # remove stock from user's portfolio
+        # check if user has the shares they want to sell
+        sell = int(request.form.get("shares"))
+        shares = db.execute("SELECT sum(shares) FROM transactions JOIN stocks ON transactions.symbol_id = stocks.symbol_id WHERE user_id = :user_id AND symbol = :symbol GROUP BY user_id",
+        user_id=session["user_id"], symbol=request.form.get("symbol").upper())
+        if len(shares) == 0 or sell > shares[0]["sum(shares)"]:
+            return apology("you have not enough minerals")
 
+        # implement sale as negative quantity transaction
+        else:
+            # retrieve stock quote
+            name, price, symbol = get_quote(request.form.get("symbol"))
 
+            # retrieve symbol_id
+            symbol_id = db.execute("SELECT symbol_id FROM stocks WHERE symbol = :symbol",
+                    symbol=symbol)
+
+            # compute current time
+            time = db.execute("SELECT datetime('now')")[0]["datetime('now')"]
+
+            db.execute("INSERT INTO transactions (user_id, symbol_id, shares, price, time) VALUES (:user_id, :symbol_id, :shares, :price, :time)",
+            user_id=session["user_id"], symbol_id=symbol_id[0]["symbol_id"], shares=-sell, price=price, time=time)
+
+            # update cash
+            cost = price * sell
+            db.execute("UPDATE users SET cash = cash + :cost WHERE user_id = :id_", cost=cost, id_=session["user_id"])
+
+            # redirect to index
+            return redirect(url_for("index"))
+
+    # else if user reached route via GET (as by clicking a link or via redirect)
+    else:
+        # display form
+        return render_template("sell.html", stocks=stocks, cash=usd(cash), total=usd(total))
+
+def get_quote(symbol):
+    # retrieve stock quote
+        stock = lookup(symbol)
+
+        # ensure stock is valid
+        if stock == None:
+            return apology("invalid stock")
+
+        # store stock info
+        name = stock["name"]
+        price = stock["price"]
+        symbol = stock["symbol"]
+
+        return name, price, symbol
 
 
