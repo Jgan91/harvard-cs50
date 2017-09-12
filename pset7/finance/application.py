@@ -92,8 +92,11 @@ def buy():
         # redirect user to homepage
         return redirect(url_for("index"))
 
+    # retrieve portfolio
+    stocks, cash, total = portfolio()
+
     # display form
-    return render_template("buy.html")
+    return render_template("buy.html", stocks=stocks, cash=usd(cash), total=usd(total))
 
 @app.route("/history")
 @login_required
@@ -234,13 +237,21 @@ def register():
 @login_required
 def sell():
     """Sell shares of stock."""
-    # display form
-    return render_template("sell.html")
-
-    # remove stock from user's portfolio
+    if request.method == "POST":
+        # remove stock from user's portfolio
+        # check if user has the shares they want to sell
+        shares = request.form.get("shares")
         # implement as negative quantity transaction
 
 
-    # update cash
-    return apology("TODO")
+        # update cash
+
+    # retrieve portfolio
+    stocks, cash, total = portfolio()
+
+    # display form
+    return render_template("sell.html", stocks=stocks, cash=usd(cash), total=usd(total))
+
+
+
 
