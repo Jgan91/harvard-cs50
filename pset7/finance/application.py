@@ -4,6 +4,8 @@ from flask_session import Session
 from passlib.apps import custom_app_context as pwd_context
 from tempfile import mkdtemp
 
+import sys
+
 from helpers import *
 
 # configure application
@@ -33,7 +35,7 @@ db = SQL("sqlite:///finance.db")
 @app.route("/")
 @login_required
 def index():
-    # retrieve portfolio
+    # retrieve portfolio if not first time registering
     stocks, cash, total = portfolio()
 
     # display portfolio
@@ -150,7 +152,7 @@ def login():
         if len(rows) != 1 or not pwd_context.verify(request.form.get("password"), rows[0]["hash"]):
             return apology("invalid username and/or password")
 
-        # remember which user has logged in
+        # remember which user has registered
         session["user_id"] = rows[0]["user_id"]
 
         # redirect user to home page
@@ -174,6 +176,7 @@ def logout():
 def portfolio():
     """Retrieve users portfolio"""
     # store symbol, name, shares, total
+    #try:
     stocks = db.execute("SELECT symbol, name, sum(shares) FROM transactions JOIN stocks ON transactions.symbol_id = stocks.symbol_id WHERE transactions.user_id = :user_id GROUP BY stocks.symbol_id", user_id=session["user_id"])
     total = 0
 
@@ -190,7 +193,13 @@ def portfolio():
         user_id=session["user_id"])[0]["cash"]
     total += cash
     return stocks, cash, total
-
+'''
+    except:
+        stocks = []
+        cash = 10000
+        total = 10000
+        return stocks, cash, total
+'''
 
 @app.route("/quote", methods=["GET", "POST"])
 @login_required
@@ -208,7 +217,7 @@ def quote():
             return apology("invalid stock")
 
         # display stock quote
-        return render_template("quoted.html", name=name, price=price, symbol=symbol, stocks=stocks, cash=usd(cash), total=usd(total))
+        return render_template("quoted.html", name=name, price=usd(price), symbol=symbol, stocks=stocks, cash=usd(cash), total=usd(total))
 
     # else if user reached route via GET (as by clicking a link or via redirect)
     else:
@@ -221,21 +230,25 @@ def register():
     if request.method == "POST":
 
         # ensure user inputs username
-        if not request.form.get("username"):
+        username = request.form.get("username")
+        password = request.form.get("password")
+        confirm = request.form.get("confirm")
+
+        if not username:
             return apology("Missing username!")
 
         # ensure user inputs the same password twice
-        elif not request.form.get("password"):
+        elif not password:
             return apology("Missing password!")
 
-        elif not request.form.get("confirm"):
+        elif not confirm:
             return apology("Please confirm password!")
 
-        elif request.form.get("password") != request.form.get("confirm"):
+        elif password != confirm:
             return apology("Passwords don't match! Please try again.")
 
         # query database
-        rows = db.execute("SELECT * FROM users WHERE username = :username", username=request.form.get("username"))
+        rows = db.execute("SELECT * FROM users WHERE username = :username", username=username)
 
         # ensure username doesn't exist
         if len(rows) == 1:
@@ -246,8 +259,8 @@ def register():
             hash_ = pwd_context.hash(request.form.get("password"))
             rows = db.execute("INSERT INTO users (username, hash) VALUES(:username, :hash_)",
                 username=request.form.get("username"), hash_=hash_)
-            session["user_id"] = db.execute("SELECT user_id FROM users WHERE username = :username", username=request.form.get("username"))
-            flash("Registered!")
+            session["user_id"] = db.execute("SELECT user_id FROM users WHERE username = :username", username=username)[0]["user_id"]
+            flash("Registered! Welcome {}".format(username))
             return redirect(url_for("index"))
 
     # else if user reached route via GET (as by clicking a link or via redirect)
@@ -300,6 +313,5 @@ def sell():
     else:
         # display form
         return render_template("sell.html", stocks=stocks, cash=usd(cash), total=usd(total))
-
 
 
